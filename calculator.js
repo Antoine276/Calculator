@@ -1,5 +1,6 @@
 // Constantes
-const MaxNumber = 10;
+const MAX_NUMBER = 15;
+const SEUIL = 1e-6;
 
 // Operations enum
 const MathsOps = Object.freeze({
@@ -46,6 +47,7 @@ const ButtonRemoveAll = document.getElementById("removeAll");
 
 // Display
 const Display = document.getElementById("display");
+const HistoryDisplay = document.getElementById("historyDisplay");
 
 // Events -> Press number
 Button0.addEventListener("click", () => pressNumber(0));
@@ -74,14 +76,14 @@ ButtonDivide.addEventListener("click", () => mathsOperation(MathsOps.Divide));
 ButtonEqual.addEventListener("click", () => calculate());
 
 function pressNumber(number) {
-    if ((typeof(number) === "number") && (Calculator.integer.length < MaxNumber)) {
+    if ((typeof(number) === "number") && (Calculator.integer.length < MAX_NUMBER)) {
         Calculator.integer.push(number);
     }
 
     // TODO: remove
     console.table(Calculator.integer);
 
-    refresh();
+    refreshNumber();
     refreshDisplay();
 }
 
@@ -91,36 +93,39 @@ function remove() {
     // TODO: remove
     console.table(Calculator.integer);
 
-    refresh();
+    refreshNumber();
     refreshDisplay();
 }
 
-function cleanNumber() {
+function removeAll() {
+    cleanNumber();
+    cleanArray();
+    Calculator.numberOp = 0;
+    Calculator.operation = MathsOps.None;
+
+    refreshDisplay();
+}
+
+function cleanArray() {
     const size = Calculator.integer.length;
 
     for (let i = 0; i < size; i++) {
         Calculator.integer.pop();
     }
 
-    Calculator.sign = false;
-
     // TODO: remove
     console.table(Calculator.integer);
-
-    refresh();
 }
 
-function removeAll() {
-    cleanNumber();
-    Calculator.numberOp = 0;
-
-    refreshDisplay();
+function cleanNumber() {
+    Calculator.number = 0;
+    Calculator.sign = false;
 }
 
 function sign() {
     Calculator.sign = Calculator.sign ? false : true;
-
-    refresh();
+    
+    refreshNumber();
     refreshDisplay();
 }
 
@@ -131,6 +136,7 @@ function mathsOperation(operation) {
 
     Calculator.numberOp = Calculator.number;
     cleanNumber();
+    cleanArray();
 
     console.log(Calculator.operation);
 
@@ -138,34 +144,65 @@ function mathsOperation(operation) {
 }
 
 function calculate() {
+    let ExcReport = 0;
+    
     if (Calculator.operation !== MathsOps.None) {
 
         switch (Calculator.operation) {
             case MathsOps.Add :
-                Calculator.number = Calculator.numberOp + Calculator.number;
+                Calculator.number = add(Calculator.numberOp, Calculator.number);
                 break;
                 
             case MathsOps.Substract :
-                Calculator.number = Calculator.numberOp - Calculator.number;
+                Calculator.number = substract(Calculator.numberOp, Calculator.number);
                 break;
                 
             case MathsOps.Multiply :
-                Calculator.number = Calculator.numberOp * Calculator.number;
+                Calculator.number = multiply(Calculator.numberOp, Calculator.number);
                 break;
                 
             case MathsOps.Divide :
-                Calculator.number = Calculator.numberOp / Calculator.number;
+                Calculator.number = divide(Calculator.numberOp, Calculator.number, ExcReport);
                 break;
         }
+
+        Calculator.sign = false;
     
         Calculator.numberOp = 0;
         Calculator.operation = MathsOps.None;
+        cleanArray();
     
-        refreshDisplay();
+        ExcReport < 0 ? Display.textContent = "ERROR" : refreshDisplay();
     }
 }
 
-function refresh() {
+function add(a, b) {
+    return a + b;
+}
+
+function substract(a, b) {
+    return a - b;
+}
+
+function multiply(a, b) {
+    return a * b;
+}
+
+function divide(a, b, ExcReport) {
+    if (Math.abs(b) > SEUIL) {
+        return a / b;
+    }
+    else {
+        ExcReport = -1;
+        return 0;
+    }
+}
+
+function truncTo(x, n) {
+    return n > 0 ? (Math.trunc(x * Math.pow(10, n)) / Math.pow(10, n)) : x;
+}
+
+function refreshNumber() {
     const size = Calculator.integer.length;
     Calculator.number = 0;
     
@@ -173,11 +210,22 @@ function refresh() {
         Calculator.number += (Calculator.integer[size - 1 - i] * Math.pow(10, i));
     }
 
-    if (Calculator.sign) {
-        Calculator.number *= -1;
+    if (Calculator.number === 0) {
+        Calculator.sign = false;
+    }
+    else {
+        if (Calculator.sign) {
+            Calculator.number *= -1;
+        }
     }
 }
 
 function refreshDisplay() {
-    Display.textContent = Calculator.number.toString();
+    if (Calculator.number > Math.pow(10, MAX_NUMBER)) {
+        Display.textContent = Math.exp(Calculator.number.toString());
+    }
+    else {
+        Display.textContent = Calculator.number;
+    }
+    HistoryDisplay.textContent = Calculator.numberOp.toString();
 }
